@@ -8,14 +8,16 @@ and your app process gets something else.  It's even more of a pain to use with 
 process starts with a breakpoint as well, so you have to open `node-inspector` for it, resume it, *then* open
 `node-inspector` for your actual app.
 
-This package combines both approaches: it uses `piping`'s require hook to only watch files that have been required,
+`smart-restart` combines both approaches: it uses `piping`'s require hook to only watch files that have been required,
 but it `spawns` your app instead of running a cluster, so that you can pass `--debug` or `--debug-brk` to your app.
 
 ## Usage
 
 To run `./src/index.js` in a child process and watch files it `require`s:
 ```js
-require('restart-hook')({
+var launch = require('smart-restart')
+
+launch({
   main: './src/index.js',      // path to your script
   command: 'node',             // optional, the command to `spawn` (default: `process.argv[0]`)
   commandOptions: ['--debug'], // optional, arguments that come before `main`
@@ -28,3 +30,5 @@ require('restart-hook')({
   includeModules: false,       // optional, whether to include `node_modules` (default: false)
 })
 ```
+
+You can `launch` as many other processes as you want in the same supervisor process.
