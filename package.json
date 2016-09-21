@@ -2,13 +2,23 @@
   "name": "piping",
   "version": "0.3.1",
   "description": "Keep your code piping hot! Live code reloading without additional binaries",
-  "main": "lib/piping.js",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "rimraf lib && babel src --out-dir lib",
+    "prepublish": "npm run build"
+  },
   "dependencies": {
     "chokidar": "^1.1.0",
     "colors": "1.0.x"
   },
   "devDependencies": {
-    "coffee-script": "~1.6.0"
+    "babel-cli": "^6.14.0",
+    "babel-preset-es2015": "^6.14.0",
+    "babel-preset-stage-1": "^6.13.0",
+    "babel-register": "^6.14.0",
+    "chalk": "^1.1.3",
+    "coffee-script": "~1.6.0",
+    "rimraf": "^2.5.4"
   },
   "repository": "git://github.com/mdlawson/piping.git",
   "keywords": [
