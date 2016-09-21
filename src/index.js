@@ -34,7 +34,7 @@ module.exports = function launch(ops) {
       binaryInterval: options.binaryInterval || 300
     })
     watcher.on("change", function(file) {
-      console.log(chalk.bold.red("[require-hook]"), "File", path.relative(process.cwd(), file), "has changed, reloading.")
+      console.log(chalk.bold.red("[smart-restart]"), "File", path.relative(process.cwd(), file), "has changed, reloading.")
       respawn()
     })
 
@@ -52,11 +52,11 @@ module.exports = function launch(ops) {
     )
     child.on('message', message => {
       if (message.err && (!options.respawnOnExit || message.err !== lastErr)) {
-        console.log(chalk.bold.red("[require-hook]"), "can't execute file:", options.main)
-        console.log(chalk.bold.red("[require-hook]"), "error given was:", message.err)
+        console.log(chalk.bold.red("[smart-restart]"), "can't execute file:", options.main)
+        console.log(chalk.bold.red("[smart-restart]"), "error given was:", message.err)
         if (options.respawnOnExit) {
           lastErr = message.err
-          console.log(chalk.bold.red("[require-hook]"), "further repeats of this error will be suppressed...")
+          console.log(chalk.bold.red("[smart-restart]"), "further repeats of this error will be suppressed...")
           respawn()
         }
       } else if (message.file) {
