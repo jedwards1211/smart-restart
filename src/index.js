@@ -3,7 +3,7 @@ import path from 'path'
 import {spawn} from 'child_process'
 import chokidar from 'chokidar'
 
-module.exports = function piping(ops) {
+module.exports = function launch(ops) {
   let lastErr = ''
   let child
   let watcher
@@ -34,7 +34,7 @@ module.exports = function piping(ops) {
       binaryInterval: options.binaryInterval || 300
     })
     watcher.on("change", function(file) {
-      console.log(chalk.bold.red("[piping]"), "File", path.relative(process.cwd(), file), "has changed, reloading.")
+      console.log(chalk.bold.red("[require-hook]"), "File", path.relative(process.cwd(), file), "has changed, reloading.")
       respawn()
     })
 
@@ -52,11 +52,11 @@ module.exports = function piping(ops) {
     )
     child.on('message', message => {
       if (message.err && (!options.respawnOnExit || message.err !== lastErr)) {
-        console.log(chalk.bold.red("[piping]"), "can't execute file:", options.main)
-        console.log(chalk.bold.red("[piping]"), "error given was:", message.err)
+        console.log(chalk.bold.red("[require-hook]"), "can't execute file:", options.main)
+        console.log(chalk.bold.red("[require-hook]"), "error given was:", message.err)
         if (options.respawnOnExit) {
           lastErr = message.err
-          console.log(chalk.bold.red("[piping]"), "further repeats of this error will be suppressed...")
+          console.log(chalk.bold.red("[require-hook]"), "further repeats of this error will be suppressed...")
           respawn()
         }
       } else if (message.file) {
