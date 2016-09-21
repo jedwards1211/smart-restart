@@ -1,7 +1,7 @@
 {
-  "name": "piping",
-  "version": "0.3.1",
-  "description": "Keep your code piping hot! Live code reloading without additional binaries",
+  "name": "restart-hook",
+  "version": "1.0.0",
+  "description": "Like nodemon but only watches require()d files. Like piping but easy to use with node-inspector.",
   "main": "lib/index.js",
   "scripts": {
     "build": "rimraf lib && babel src --out-dir lib",
@@ -9,24 +9,21 @@
   },
   "dependencies": {
     "chokidar": "^1.1.0",
-    "colors": "1.0.x"
+    "chalk": "^1.1.3"
   },
   "devDependencies": {
     "babel-cli": "^6.14.0",
     "babel-preset-es2015": "^6.14.0",
     "babel-preset-stage-1": "^6.13.0",
-    "babel-register": "^6.14.0",
-    "chalk": "^1.1.3",
-    "coffee-script": "~1.6.0",
     "rimraf": "^2.5.4"
   },
-  "repository": "git://github.com/mdlawson/piping.git",
+  "repository": "git://github.com/jedwards1211/restart-hook.git",
   "keywords": [
     "live",
     "code",
     "reload",
     "hot"
   ],
-  "author": "Michael Lawson",
+  "author": "Andy Edwards",
   "license": "MIT"
 }
