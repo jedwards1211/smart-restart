@@ -1,30 +1,42 @@
-# untranspiled-js-library-skeleton
+# smart-restart
 
-[![CircleCI](https://circleci.com/gh/jedwards1211/untranspiled-js-library-skeleton?style=svg)](https://circleci.com/gh/jedwards1211/untranspiled-js-library-skeleton)
-[![Coverage Status](https://codecov.io/gh/jedwards1211/untranspiled-js-library-skeleton/branch/master/graph/badge.svg)](https://codecov.io/gh/jedwards1211/untranspiled-js-library-skeleton)
+[![CircleCI](https://circleci.com/gh/jedwards1211/smart-restart?style=svg)](https://circleci.com/gh/jedwards1211/smart-restart)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
-[![npm version](https://badge.fury.io/js/untranspiled-js-library-skeleton.svg)](https://badge.fury.io/js/untranspiled-js-library-skeleton)
+[![npm version](https://badge.fury.io/js/smart-restart.svg)](https://badge.fury.io/js/smart-restart)
 
-This is my personal skeleton for creating an untranspiled JS library npm package. You are welcome to use it.
+`nodemon` and `piping` are great, but each has their limitations:
 
-## Quick start
+`nodemon` sometimes restarts when you change files the server isn't using, which is a hassle when you're working on
+isomorphic apps and just want a webpack hot update on the client.
 
-```sh
-npx 0-60 clone https://github.com/jedwards1211/untranspiled-js-library-skeleton.git
+`piping` is difficult to use with `node-inspector` because it runs a cluster; the supervisor process gets debug port 5858,
+and your app process gets something else. It's even more of a pain to use with `--debug-brk` because the supervisor
+process starts with a breakpoint as well, so you have to open `node-inspector` for it, resume it, _then_ open
+`node-inspector` for your actual app.
+
+`smart-restart` combines both approaches: it uses `piping`'s require hook to only watch files that have been required,
+but it `spawns` your app instead of running a cluster, so that you can pass `--debug` or `--debug-brk` to your app.
+
+## Usage
+
+To run `./src/index.js` in a child process and watch files it `require`s:
+
+```js
+var launch = require('smart-restart')
+
+launch({
+  main: './src/index.js',      // path to your script
+  command: 'node',             // optional, the command to `spawn` (default: `process.argv[0]`)
+  commandOptions: ['--inspect'], // optional, arguments that come before `main`
+  args: [...],                 // optional, arguments that come after `main`
+  spawnOptions: {...},         // optional, options for `spawn`
+  ignore: /(\/\.|~$)/,         // optional, ignore pattern for `chokidar` (default: /(\/\.|~$)/)
+  usePolling: false,           // optional, whether to use polling in `chokidar` (default: false)
+  interval: 100,               // optional, polling interval for `chokidar` (default: 100)
+  binaryInterval: 300,         // optional, binary polling interval for `chokidar` (default: 300)
+  includeModules: false,       // optional, whether to include `node_modules` (default: false)
+})
 ```
 
-## Tools used
-
-- mocha
-- chai
-- istanbul
-- nyc
-- eslint
-- eslint-watch
-- flow
-- flow-watch
-- husky
-- semantic-release
-- Travis CI
-- Coveralls
+You can `launch` as many other processes as you want in the same supervisor process.

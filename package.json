@@ -1,7 +1,10 @@
 {
-  "name": "untranspiled-js-library-skeleton",
+  "name": "smart-restart",
   "version": "0.0.0-development",
-  "description": "my skeleton for transpiler-free JS packages",
+  "description": "Like nodemon but only watches require()d files. Like piping but easy to use with node-inspector.",
+  "engines": {
+    "node": ">=8"
+  },
   "main": "index.js",
   "author": "Andy Edwards",
   "license": "MIT",
@@ -15,7 +18,7 @@
     "test:watch": "mocha --watch $npm_package_config_mocha",
     "test:debug": "mocha --inspect-brk $npm_package_config_mocha",
     "codecov": "nyc report --reporter=text-lcov > coverage.lcov; codecov",
-    "prepublishOnly": "npm run lint && npm test",
+    "prepublishOnly": "npm run lint",
     "open:coverage": "open coverage/lcov-report/index.html",
     "semantic-release": "semantic-release"
   },
@@ -58,15 +61,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jedwards1211/untranspiled-js-library-skeleton.git"
+    "url": "https://github.com/jedwards1211/smart-restart.git"
   },
   "keywords": [
-    "skeleton"
+    "live",
+    "code",
+    "reload",
+    "hot"
   ],
   "bugs": {
-    "url": "https://github.com/jedwards1211/untranspiled-js-library-skeleton/issues"
+    "url": "https://github.com/jedwards1211/smart-restart/issues"
   },
-  "homepage": "https://github.com/jedwards1211/untranspiled-js-library-skeleton#readme",
+  "homepage": "https://github.com/jedwards1211/smart-restart#readme",
   "devDependencies": {
     "@commitlint/cli": "^6.0.2",
     "@commitlint/config-conventional": "^6.0.2",
@@ -104,5 +110,10 @@
     "major": {
       "automerge": false
     }
+  },
+  "dependencies": {
+    "chalk": "^2.4.2",
+    "chokidar": "^2.1.5",
+    "debug": "^4.1.1"
   }
 }

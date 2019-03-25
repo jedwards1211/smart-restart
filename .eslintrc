@@ -1,6 +1,10 @@
 {
   "extends": ["@jedwards1211/eslint-config", "eslint-config-prettier"],
+  "parserOptions": {
+    "ecmaVersion": 9
+  },
   "env": {
-    "commonjs": true
+    "node": true,
+    "es6": true
   }
 }
