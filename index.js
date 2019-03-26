@@ -14,6 +14,8 @@ module.exports = function launch(ops) {
   let lastErr = ''
   let child
   let watcher
+  let childRunning = false
+  let restartWhenDone = false
 
   const options = Object.assign(
     {
@@ -42,16 +44,13 @@ module.exports = function launch(ops) {
   process.on('exit', () => child && child.kill())
 
   function restart() {
-    if (child) {
+    if (childRunning) {
       debug('killing child...')
-      const finalChild = child
-      child = null
+      restartWhenDone = true
+      child.kill(killSignal)
       if (killSignal === 'SIGKILL' || killSignal === 9) {
-        finalChild.kill(killSignal)
+        childRunning = false
       } else {
-        finalChild.on('exit', restart)
-        finalChild.on('error', restart)
-        finalChild.kill(killSignal)
         return
       }
     }
@@ -102,6 +101,18 @@ module.exports = function launch(ops) {
 
     debug('spawning child with args: ', args)
     child = spawn(...args)
+    childRunning = true
+    restartWhenDone = false
+
+    function done() {
+      childRunning = false
+      if (restartWhenDone) {
+        restart()
+      }
+    }
+
+    child.on('exit', done)
+    child.on('error', done)
 
     debug('spawned child pid: ', child.pid)
     child.on('message', message => {
