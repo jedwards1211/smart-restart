@@ -9,6 +9,11 @@ const path = require('path')
 const { spawn } = require('child_process')
 const chokidar = require('chokidar')
 const debug = require('debug')('smart-restart:supervisor')
+const { debounce } = require('lodash')
+
+function log(...args) {
+  console.log(chalk.bold.red('[smart-restart]'), ...args)
+}
 
 module.exports = function launch(ops) {
   let lastErr = ''
@@ -45,14 +50,10 @@ module.exports = function launch(ops) {
 
   function restart() {
     if (childRunning) {
-      debug('killing child...')
       restartWhenDone = true
+      log('killing process with', killSignal)
       child.kill(killSignal)
-      if (killSignal === 'SIGKILL' || killSignal === 9) {
-        childRunning = false
-      } else {
-        return
-      }
+      return
     }
     if (watcher) watcher.close()
 
@@ -64,27 +65,9 @@ module.exports = function launch(ops) {
       binaryInterval: options.binaryInterval || 300,
     })
     watcher.on('change', function(file) {
-      if (deleteRequireCache[file]) {
-        console.log(
-          chalk.bold.red('[smart-restart]'),
-          'File',
-          path.relative(process.cwd(), file),
-          'has changed, clearing require cache.'
-        )
-        for (let key in deleteRequireCache) {
-          if (deleteRequireCache[key]) {
-            delete require.cache[key]
-          }
-        }
-        return
-      }
-      console.log(
-        chalk.bold.red('[smart-restart]'),
-        'File',
-        path.relative(process.cwd(), file),
-        'has changed, reloading.'
-      )
-      restart()
+      log('File', path.relative(process.cwd(), file), 'has changed')
+      if (deleteRequireCache[file]) clearRequireCacheSoon()
+      else restartSoon()
     })
 
     const args = [
@@ -99,12 +82,20 @@ module.exports = function launch(ops) {
       }),
     ]
 
-    debug('spawning child with args: ', args)
+    log('spawning process')
     child = spawn(...args)
     childRunning = true
     restartWhenDone = false
 
-    function done() {
+    function done(codeOrError, signal) {
+      if (codeOrError instanceof Error) {
+        log('child process error:', codeOrError.message)
+      } else if (typeof codeOrError === 'number') {
+        log('process exited with code', codeOrError)
+      } else if (signal != null) {
+        log('process was killed with', signal)
+      }
+
       childRunning = false
       if (restartWhenDone) {
         restart()
@@ -126,18 +117,10 @@ module.exports = function launch(ops) {
         return
       }
       if (err && (!options.restartOnError || err !== lastErr)) {
-        console.log(
-          chalk.bold.red('[smart-restart]'),
-          "can't execute file:",
-          options.main
-        )
-        console.log(chalk.bold.red('[smart-restart]'), 'error given was:', err)
+        log('child process error:', err)
         if (options.restartOnError) {
           lastErr = err
-          console.log(
-            chalk.bold.red('[smart-restart]'),
-            'further repeats of this error will be suppressed...'
-          )
+          log('further repeats of this error will be suppressed...')
           restart()
         }
       } else if (file) {
@@ -149,15 +132,18 @@ module.exports = function launch(ops) {
       }
     })
   }
-
   restart()
 
+  const restartSoon = debounce(() => {
+    restart()
+  }, 500)
+  const clearRequireCacheSoon = debounce(() => {
+    for (let key in require.cache) delete require.cache[key]
+    log('cleared require cache')
+  }, 500)
+
   function kill(signal = killSignal) {
-    if (child != null) {
-      const finalChild = child
-      child = null
-      finalChild.kill(signal)
-    }
+    if (child != null) child.kill(signal)
   }
 
   return {
