@@ -20,7 +20,7 @@ module.exports = function launch(ops) {
   let child
   let watcher
   let childRunning = false
-  let restartWhenDone = false
+  let killTimeout = null
 
   const options = Object.assign(
     {
@@ -48,14 +48,34 @@ module.exports = function launch(ops) {
   options.deleteRequireCache.forEach(m => (deleteRequireCache[m] = true))
   process.on('exit', () => child && child.kill())
 
+  function done(codeOrError, signal) {
+    if (codeOrError instanceof Error) {
+      log('child process error:', codeOrError.message)
+    } else if (typeof codeOrError === 'number') {
+      log('process exited with code', codeOrError)
+    } else if (signal != null) {
+      log('process was killed with', signal)
+    }
+
+    childRunning = false
+    restart()
+  }
+
   function restart() {
     if (childRunning) {
-      restartWhenDone = true
-      log('killing process with', killSignal)
-      child.kill(killSignal)
+      if (killTimeout == null) {
+        log('killing process with', killSignal)
+        child.kill(killSignal)
+        killTimeout = setTimeout(() => {
+          childRunning = false
+          restart()
+        }, ops.killTimeout || 10000)
+      }
       return
     }
-    if (watcher) watcher.close()
+
+    // clean up everything from previous launch
+    kill('SIGKILL')
 
     watcher = chokidar.watch(initial, {
       ignored: options.ignore,
@@ -85,22 +105,6 @@ module.exports = function launch(ops) {
     log('spawning process')
     child = spawn(...args)
     childRunning = true
-    restartWhenDone = false
-
-    function done(codeOrError, signal) {
-      if (codeOrError instanceof Error) {
-        log('child process error:', codeOrError.message)
-      } else if (typeof codeOrError === 'number') {
-        log('process exited with code', codeOrError)
-      } else if (signal != null) {
-        log('process was killed with', signal)
-      }
-
-      childRunning = false
-      if (restartWhenDone) {
-        restart()
-      }
-    }
 
     child.on('exit', done)
     child.on('error', done)
@@ -134,16 +138,27 @@ module.exports = function launch(ops) {
   }
   restart()
 
-  const restartSoon = debounce(() => {
-    restart()
-  }, 500)
+  const restartSoon = debounce(restart, 500)
   const clearRequireCacheSoon = debounce(() => {
-    for (let key in require.cache) delete require.cache[key]
+    child.send('CLEAR_REQUIRE_CACHE')
     log('cleared require cache')
   }, 500)
 
   function kill(signal = killSignal) {
-    if (child != null) child.kill(signal)
+    childRunning = false
+    if (killTimeout != null) {
+      clearTimeout(killTimeout)
+      killTimeout = null
+    }
+    if (child) {
+      child.removeAllListeners()
+      child.kill(signal)
+      child = null
+    }
+    if (watcher) {
+      watcher.removeAllListeners()
+      watcher.close()
+    }
   }
 
   return {

@@ -26,16 +26,23 @@ To run `./src/index.js` in a child process and watch files it `require`s:
 var launch = require('smart-restart')
 
 launch({
-  main: './src/index.js',      // path to your script
-  command: 'node',             // optional, the command to `spawn` (default: `process.argv[0]`)
-  commandOptions: ['--inspect'], // optional, arguments that come before `main`
-  args: [...],                 // optional, arguments that come after `main`
-  spawnOptions: {...},         // optional, options for `spawn`
-  ignore: /(\/\.|~$)/,         // optional, ignore pattern for `chokidar` (default: /(\/\.|~$)/)
-  usePolling: false,           // optional, whether to use polling in `chokidar` (default: false)
-  interval: 100,               // optional, polling interval for `chokidar` (default: 100)
-  binaryInterval: 300,         // optional, binary polling interval for `chokidar` (default: 300)
-  includeModules: false,       // optional, whether to include `node_modules` (default: false)
+  main: './src/index.js',         // path to your script
+  command: 'node',                // optional, the command to `spawn` (default: `process.argv[0]`)
+  commandOptions: ['--inspect'],  // optional, arguments that come before `main`
+  args: [...],                    // optional, arguments that come after `main`
+  spawnOptions: {...},            // optional, options for `spawn`
+  ignore: /(\/\.|~$)/,            // optional, ignore pattern for `chokidar` (default: /(\/\.|~$)/)
+  usePolling: false,              // optional, whether to use polling in `chokidar` (default: false)
+  interval: 100,                  // optional, polling interval for `chokidar` (default: 100)
+  binaryInterval: 300,            // optional, binary polling interval for `chokidar` (default: 300)
+  includeModules: false,          // optional, whether to include `node_modules` (default: false)
+  killSignal: 'SIGTERM',          // optional, signal to kill process with when restarting
+  killTimeout: 5000,              // optional, max amount of milliseconds to wait for process to get killed (default: 10000)
+  deleteRequireCache: [           // optional, when any files in this array (or files they require)
+                                  //    are changed, all of these files will be deleted from `require.cache`
+                                  //    instead of restarting the process.
+    'src/server/ssr/serverSideRender.js',
+  ],
 })
 ```
 
