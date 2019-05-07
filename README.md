@@ -31,6 +31,7 @@ launch({
   commandOptions: ['--inspect'],  // optional, arguments that come before `main`
   args: [...],                    // optional, arguments that come after `main`
   spawnOptions: {...},            // optional, options for `spawn`
+  onChildSpawned: child => {},    // optional, callback to receive ChildProcess instance
   ignore: /(\/\.|~$)/,            // optional, ignore pattern for `chokidar` (default: /(\/\.|~$)/)
   usePolling: false,              // optional, whether to use polling in `chokidar` (default: false)
   interval: 100,                  // optional, polling interval for `chokidar` (default: 100)

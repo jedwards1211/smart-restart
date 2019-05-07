@@ -36,7 +36,7 @@ module.exports = function launch(ops) {
     },
     ops
   )
-  const { killSignal } = options
+  const { killSignal, onChildSpawned } = options
   if (!options.main) throw new Error('missing main')
   const initial = path.resolve(options.main)
 
@@ -135,6 +135,8 @@ module.exports = function launch(ops) {
         watcher.add(path.resolve(file))
       }
     })
+
+    if (onChildSpawned) onChildSpawned(child)
   }
   restart()
 
