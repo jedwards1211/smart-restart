@@ -44,6 +44,8 @@ launch({
                                   //    instead of restarting the process.
     'src/server/ssr/serverSideRender.js',
   ],
+  restartOnError: true,           // optional, restart when child process has an uncaught error/promise rejection (default: true)
+  restartOnExit: true,            // optional, restart when child process exits (default: true)
 })
 ```
 

@@ -27,6 +27,7 @@ module.exports = function launch(ops) {
       includeModules: false,
       ignore: /(\/\.|~$)/,
       restartOnError: true,
+      restartOnExit: true,
       killSignal: 'SIGINT',
       command: process.argv[0],
       commandOptions: [],
@@ -58,7 +59,7 @@ module.exports = function launch(ops) {
     }
 
     childRunning = false
-    restart()
+    if (options.restartOnExit) restart()
   }
 
   function restart() {
