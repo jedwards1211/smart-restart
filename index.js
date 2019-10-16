@@ -59,7 +59,7 @@ module.exports = function launch(ops) {
     }
 
     childRunning = false
-    if (options.restartOnExit) restart()
+    if (typeof codeOrError !== 'number' || options.restartOnExit) restart()
   }
 
   function restart() {
@@ -113,7 +113,11 @@ module.exports = function launch(ops) {
     debug('spawned child pid: ', child.pid)
     child.on('message', message => {
       debug('message received')
-      const { status, file, parent, err } = message
+      const { status, file, parent, err, exit } = message
+      if (exit != null) {
+        log('child process requested exit with code', exit)
+        process.exit(exit)
+      }
       if (status === 'ready') {
         debug('sending message:', options)
         child.send(options, error => {

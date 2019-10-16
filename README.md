@@ -50,3 +50,8 @@ launch({
 ```
 
 You can `launch` as many other processes as you want in the same supervisor process.
+
+## Exiting for good
+
+You can `process.send({exit: <code>})` to tell `smart-restart` to exit
+immediately instead of waiting to relaunch your process.

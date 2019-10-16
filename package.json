@@ -1,6 +1,6 @@
 {
   "name": "smart-restart",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Like nodemon but only watches require()d files. Like piping but easy to use with node-inspector.",
   "engines": {
     "node": ">=8"
