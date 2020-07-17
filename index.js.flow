@@ -1,0 +1,29 @@
+// @flow
+
+import { type ChildProcess } from 'child_process'
+
+export type LaunchOptions = $ReadOnly<{
+  main: string,
+  command?: ?string,
+  commandOptions?: ?$ReadOnlyArray<string>,
+  args?: ?$ReadOnlyArray<string>,
+  spawnOptions?: ?child_process$spawnOpts,
+  onChildSpawned?: ?(child: ChildProcess) => mixed,
+  ignore?: ?RegExp,
+  usePolling?: ?boolean,
+  interval?: ?number,
+  binaryInterval?: ?number,
+  includeModules?: ?boolean,
+  killSignal?: ?string,
+  killTimeout?: ?number,
+  deleteRequireCache?: ?$ReadOnlyArray<string>,
+  restartOnError?: ?boolean,
+  restartOnExit?: ?boolean,
+}>
+
+export interface LaunchProcess {
+  restart(): void;
+  kill(signal?: number): void;
+}
+
+declare export default function launch(opts: LaunchOptions): LaunchProcess
