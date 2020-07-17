@@ -15,7 +15,7 @@ function log(...args) {
   console.log(chalk.bold.red('[smart-restart]'), ...args)
 }
 
-module.exports = function launch(ops) {
+function launch(ops) {
   let lastErr = ''
   let child
   let watcher
@@ -174,12 +174,15 @@ module.exports = function launch(ops) {
   }
 }
 
+module.exports = launch
+launch.default = launch
+
 if (!module.parent) {
   const mainIndex = process.argv.findIndex((arg, i) => i > 1 && arg[0] !== '-')
   const main = process.argv[mainIndex]
   const commandOptions = process.argv.slice(3, mainIndex)
   const args = process.argv.slice(mainIndex + 1)
-  module.exports({
+  launch({
     main,
     commandOptions,
     args,

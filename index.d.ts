@@ -1,6 +1,6 @@
 import { ChildProcess, SpawnOptions } from 'child_process'
 
-interface LaunchOptions {
+export interface LaunchOptions {
   main: string
   command?: string
   commandOptions?: ReadonlyArray<string>
@@ -19,11 +19,9 @@ interface LaunchOptions {
   restartOnExit?: boolean
 }
 
-interface LaunchProcess {
+export interface LaunchProcess {
   restart(): void
   kill(signal?: number): void
 }
 
-declare const launch: (opts: LaunchOptions) => LaunchProcess
-
-export = launch
+export default function launch(opts: LaunchOptions): LaunchProcess
