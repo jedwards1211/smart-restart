@@ -164,7 +164,9 @@ function launch(ops) {
     }
     if (watcher) {
       watcher.removeAllListeners()
-      watcher.close()
+      watcher
+        .close()
+        .catch(err => console.error('Error closing file watcher:', err.stack))
     }
   }
 

@@ -121,7 +121,7 @@
   },
   "dependencies": {
     "chalk": "^2.4.2",
-    "chokidar": "^2.1.5",
+    "chokidar": "^3.5.3",
     "debug": "^4.1.1",
     "lodash": "^4.17.11"
   }
