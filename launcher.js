@@ -23,6 +23,7 @@ process.on('message', options => {
   module._load = function(name, parent, isMain) {
     const file = module._resolveFilename(name, parent)
     if (
+      parent &&
       (options.includeModules || file.indexOf('node_modules') < 0) &&
       !natives[file] &&
       file !== main
