@@ -8,6 +8,9 @@ dependencies:
   '@babel/runtime':
     specifier: ^7.18.6
     version: 7.24.5
+  '@types/node':
+    specifier: ^20.12.10
+    version: 20.12.10
   chalk:
     specifier: ^2.4.2
     version: 2.4.2
@@ -58,9 +61,6 @@ devDependencies:
   '@types/lodash':
     specifier: ^4.17.1
     version: 4.17.1
-  '@types/node':
-    specifier: ^20.12.10
-    version: 20.12.10
   '@typescript-eslint/eslint-plugin':
     specifier: ^7.6.0
     version: 7.8.0(@typescript-eslint/parser@7.8.0)(eslint@8.57.0)(typescript@5.4.5)
@@ -1728,7 +1728,7 @@ packages:
     resolution: {integrity: sha512-Eem5pH9pmWBHoGAT8Dr5fdc5rYA+4NAovdM4EktRPVAAiJhmWWfQrA0cFhAbOsQdSfIHjAud6YdkbL69+zSKjw==}
     dependencies:
       undici-types: 5.26.5
-    dev: true
+    dev: false
 
   /@types/semver@7.5.8:
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
@@ -4120,7 +4120,7 @@ packages:
 
   /undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
-    dev: true
+    dev: false
 
   /unicode-canonical-property-names-ecmascript@2.0.0:
     resolution: {integrity: sha512-yY5PpDlfVIU5+y/BSCxAJRBIS1Zc2dDG3Ujq+sR0U+JjUevW2JhocOF+soROYDSaAezOzOKuyyixhD6mBknSmQ==}
