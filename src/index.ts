@@ -1,26 +1,45 @@
 #!/usr/bin/env node
 
-'use strict'
-
 /* eslint-disable no-console */
+import chalk from 'chalk'
+import path from 'path'
+import { ChildProcess, SpawnOptions, spawn } from 'child_process'
+import chokidar, { FSWatcher } from 'chokidar'
+import createDebugger from 'debug'
+const debug = createDebugger('smart-restart:supervisor')
+import { debounce } from 'lodash'
+import { SignalConstants } from 'os'
+import { MessageFromChild } from './launcher'
 
-const chalk = require('chalk')
-const path = require('path')
-const { spawn } = require('child_process')
-const chokidar = require('chokidar')
-const debug = require('debug')('smart-restart:supervisor')
-const { debounce } = require('lodash')
-
-function log(...args) {
+function log(...args: any[]) {
   console.log(chalk.bold.red('[smart-restart]'), ...args)
 }
 
-function launch(ops) {
+export interface LaunchOptions {
+  main: string
+  command?: string
+  commandOptions?: ReadonlyArray<string>
+  args?: ReadonlyArray<string>
+  spawnOptions?: SpawnOptions
+  onChildSpawned?: (child: ChildProcess) => void
+  ignore?: RegExp
+  usePolling?: boolean
+  interval?: number
+  binaryInterval?: number
+  includeModules?: boolean
+  killSignal?: number | keyof SignalConstants
+  killTimeout?: number
+  deleteRequireCache?: ReadonlyArray<string>
+  restartOnError?: boolean
+  restartOnExit?: boolean
+}
+
+function launch(ops: LaunchOptions) {
   let lastErr = ''
-  let child
-  let watcher
+  let child: ChildProcess | undefined
+  let watcher: FSWatcher
   let childRunning = false
-  let killTimeout = null
+  let killTimeout: NodeJS.Timeout | null = null
 
   const options = Object.assign(
     {
@@ -46,10 +65,10 @@ function launch(ops) {
   const deleteRequireCache = {
     [initial]: false,
   }
-  options.deleteRequireCache.forEach(m => (deleteRequireCache[m] = true))
+  options.deleteRequireCache.forEach((m) => (deleteRequireCache[m] = true))
   process.on('exit', () => child && child.kill())
 
-  function done(codeOrError, signal) {
+  function done(codeOrError?: number | Error, signal?: string) {
     if (codeOrError instanceof Error) {
       log('child process error:', codeOrError.message)
     } else if (typeof codeOrError === 'number') {
@@ -66,7 +85,7 @@ function launch(ops) {
     if (childRunning) {
       if (killTimeout == null) {
         log('killing process with', killSignal)
-        child.kill(killSignal)
+        child?.kill(killSignal)
         killTimeout = setTimeout(() => {
           childRunning = false
           restart()
@@ -85,7 +104,7 @@ function launch(ops) {
       interval: options.interval || 100,
       binaryInterval: options.binaryInterval || 300,
     })
-    watcher.on('change', function(file) {
+    watcher.on('change', function (file) {
       log('File', path.relative(process.cwd(), file), 'has changed')
       if (deleteRequireCache[file]) clearRequireCacheSoon()
       else restartSoon()
@@ -101,7 +120,7 @@ function launch(ops) {
       Object.assign(options.spawnOptions, {
         stdio: [0, 1, 2, 'ipc'],
       }),
-    ]
+    ] as const
 
     log('spawning process')
     child = spawn(...args)
@@ -111,16 +130,12 @@ function launch(ops) {
     child.on('error', done)
 
     debug('spawned child pid: ', child.pid)
-    child.on('message', message => {
+    child.on('message', (message: MessageFromChild) => {
       debug('message received')
-      const { status, file, parent, err, exit } = message
-      if (exit != null) {
-        log('child process requested exit with code', exit)
-        process.exit(exit)
-      }
+      const { status, file, parent, err } = message
       if (status === 'ready') {
         debug('sending message:', options)
-        child.send(options, error => {
+        child?.send(options, (error) => {
           if (error) debug(error.stack)
         })
         return
@@ -133,6 +148,11 @@ function launch(ops) {
           restart()
         }
       } else if (file) {
+        if (!parent) {
+          throw new Error(
+            `message.parent should be defined when message.file is defined`
+          )
+        }
         if (file !== initial && !origDeleteRequireCache.has(file)) {
           deleteRequireCache[file] = deleteRequireCache[parent] || false
         }
@@ -147,7 +167,7 @@ function launch(ops) {
 
   const restartSoon = debounce(restart, 500)
   const clearRequireCacheSoon = debounce(() => {
-    child.send('CLEAR_REQUIRE_CACHE')
+    child?.send('CLEAR_REQUIRE_CACHE')
     log('cleared require cache')
   }, 500)
 
@@ -160,13 +180,13 @@ function launch(ops) {
     if (child) {
       child.removeAllListeners()
       child.kill(signal)
-      child = null
+      child = undefined
     }
     if (watcher) {
       watcher.removeAllListeners()
       watcher
         .close()
-        .catch(err => console.error('Error closing file watcher:', err.stack))
+        .catch((err) => console.error('Error closing file watcher:', err.stack))
     }
   }
 
