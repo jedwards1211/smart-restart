@@ -2,9 +2,17 @@
 
 import path from 'path'
 import createDebug from 'debug'
+import chalk from 'chalk'
+import util from 'util'
 import * as module from 'module'
 import { type LaunchOptions } from '.'
+
 const debug = createDebug('smart-restart:launcher')
+
+function log(...args: any[]) {
+  // eslint-disable-next-line no-console
+  console.error(chalk.bold.red('[smart-restart]'), ...args)
+}
 
 export type MessageFromChild = {
   file?: string
@@ -65,11 +73,12 @@ process.on('message', (options: 'CLEAR_REQUIRE_CACHE' | LaunchOptions) => {
   require(main)
 })
 sendMessage({ status: 'ready' })
-function handleError(err: any) {
-  sendMessage({
-    err: (err != null ? err.stack : void 0) || err,
-  })
-}
 
-process.on('uncaughtException', handleError)
-process.on('unhandledRejection', handleError)
+process.on('uncaughtException', (err: any) => {
+  log('uncaught exception in child process:', err)
+  sendMessage({ err: util.inspect(err) })
+})
+process.on('unhandledRejection', (err: any) => {
+  log('unhandled rejection in child process:', err)
+  sendMessage({ err: util.inspect(err) })
+})

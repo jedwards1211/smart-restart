@@ -12,7 +12,7 @@ import { SignalConstants } from 'os'
 import { MessageFromChild } from './launcher'
 
 function log(...args: any[]) {
-  console.log(chalk.bold.red('[smart-restart]'), ...args)
+  console.error(chalk.bold.red('[smart-restart]'), ...args)
 }
 
 export interface LaunchOptions {
@@ -70,7 +70,7 @@ function launch(ops: LaunchOptions) {
 
   function done(codeOrError?: number | Error, signal?: string) {
     if (codeOrError instanceof Error) {
-      log('child process error:', codeOrError.message)
+      log('child process error:', codeOrError)
     } else if (typeof codeOrError === 'number') {
       log('process exited with code', codeOrError)
     } else if (signal != null) {
@@ -140,13 +140,12 @@ function launch(ops: LaunchOptions) {
         })
         return
       }
-      if (err && (!options.restartOnError || err !== lastErr)) {
-        log('child process error:', err)
-        if (options.restartOnError) {
-          lastErr = err
+      if (err && (options.restartOnError || err !== lastErr)) {
+        lastErr = err
+        if (!options.restartOnError) {
           log('further repeats of this error will be suppressed...')
-          restart()
         }
+        restart()
       } else if (file) {
         if (!parent) {
           throw new Error(
