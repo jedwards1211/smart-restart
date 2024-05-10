@@ -4,7 +4,7 @@ import path from 'path'
 import createDebug from 'debug'
 import chalk from 'chalk'
 import util from 'util'
-import * as module from 'module'
+import module = require('module')
 import { type LaunchOptions } from '.'
 
 const debug = createDebug('smart-restart:launcher')
@@ -32,7 +32,7 @@ function sendMessage(message: MessageFromChild) {
 }
 
 process.on('message', (options: 'CLEAR_REQUIRE_CACHE' | LaunchOptions) => {
-  debug('message received')
+  debug('message received', options)
   if (options === 'CLEAR_REQUIRE_CACHE') {
     for (const key in deleteRequireCache) {
       if (deleteRequireCache[key]) delete require.cache[key]

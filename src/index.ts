@@ -131,7 +131,7 @@ function launch(ops: LaunchOptions) {
 
     debug('spawned child pid: ', child.pid)
     child.on('message', (message: MessageFromChild) => {
-      debug('message received')
+      debug('message received', message)
       const { status, file, parent, err } = message
       if (status === 'ready') {
         debug('sending message:', options)
