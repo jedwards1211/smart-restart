@@ -34,6 +34,11 @@ export interface LaunchOptions {
   restartOnExit?: boolean
 }
 
+export type MessageForChild =
+  | { type: 'launch'; options: LaunchOptions }
+  | { type: 'clearRequireCache' }
+  | { type: 'fileChange'; file: string }
+
 function launch(ops: LaunchOptions) {
   let lastErr = ''
   let child: ChildProcess | undefined
@@ -81,6 +86,14 @@ function launch(ops: LaunchOptions) {
     if (typeof codeOrError !== 'number' || options.restartOnExit) restart()
   }
 
+  function sendToChild(message: MessageForChild) {
+    child?.send(message, (err) => {
+      if (err) {
+        log('failed to send message to child', err)
+      }
+    })
+  }
+
   function restart() {
     if (childRunning) {
       if (killTimeout == null) {
@@ -107,14 +120,17 @@ function launch(ops: LaunchOptions) {
     watcher.on('change', function (file) {
       log('File', path.relative(process.cwd(), file), 'has changed')
       if (deleteRequireCache[file]) clearRequireCacheSoon()
-      else restartSoon()
+      // else restartSoon()
+      else {
+        sendToChild({ type: 'fileChange', file })
+      }
     })
 
     const args = [
       options.command,
       [
         ...options.commandOptions,
-        path.resolve(__dirname, 'launcher.js'),
+        path.resolve(__dirname, `launcher${path.extname(__filename)}`),
         ...options.args,
       ],
       Object.assign(options.spawnOptions, {
@@ -132,12 +148,14 @@ function launch(ops: LaunchOptions) {
     debug('spawned child pid: ', child.pid)
     child.on('message', (message: MessageFromChild) => {
       debug('message received', message)
-      const { status, file, parent, err } = message
+      const { status, file, parent, err, restart: childSaysRestart } = message
+      if (childSaysRestart) {
+        restart()
+        return
+      }
       if (status === 'ready') {
         debug('sending message:', options)
-        child?.send(options, (error) => {
-          if (error) debug(error.stack)
-        })
+        sendToChild({ type: 'launch', options })
         return
       }
       if (err && (options.restartOnError || err !== lastErr)) {
@@ -164,9 +182,8 @@ function launch(ops: LaunchOptions) {
   }
   restart()
 
-  const restartSoon = debounce(restart, 500)
   const clearRequireCacheSoon = debounce(() => {
-    child?.send('CLEAR_REQUIRE_CACHE')
+    sendToChild({ type: 'clearRequireCache' })
     log('cleared require cache')
   }, 500)
 

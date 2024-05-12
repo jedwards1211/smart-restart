@@ -4,8 +4,9 @@ import path from 'path'
 import createDebug from 'debug'
 import chalk from 'chalk'
 import util from 'util'
-import module = require('module')
-import { type LaunchOptions } from '.'
+import Module = require('module')
+import { MessageForChild } from '.'
+import { invalidate, registerModuleParent } from './hotModuleReplacement'
 
 const debug = createDebug('smart-restart:launcher')
 
@@ -15,6 +16,7 @@ function log(...args: any[]) {
 }
 
 export type MessageFromChild = {
+  restart?: boolean
   file?: string
   parent?: string
   err?: string
@@ -26,59 +28,69 @@ const natives = process.binding('natives')
 
 const deleteRequireCache: { [key in string]?: boolean } = {}
 
-function sendMessage(message: MessageFromChild) {
+export function sendMessageToParent(message: MessageFromChild) {
   debug('sending message: ', message)
   process.send?.(message)
 }
 
-process.on('message', (options: 'CLEAR_REQUIRE_CACHE' | LaunchOptions) => {
-  debug('message received', options)
-  if (options === 'CLEAR_REQUIRE_CACHE') {
-    for (const key in deleteRequireCache) {
-      if (deleteRequireCache[key]) delete require.cache[key]
-    }
-    return
-  }
-  const origDeleteRequireCache = new Set(options.deleteRequireCache)
-  options.deleteRequireCache?.forEach((m) => (deleteRequireCache[m] = true))
-  const main = path.resolve(options.main)
-  // @ts-expect-error not typed
-  const _load_orig = module._load
-  // @ts-expect-error not typed
-  module._load = function (
-    name: string,
-    parent: { id: string },
-    isMain: boolean
-  ) {
-    // @ts-expect-error not typed
-    const file = module._resolveFilename(name, parent)
-    if (
-      parent &&
-      (options.includeModules || file.indexOf('node_modules') < 0) &&
-      !natives[file] &&
-      file !== main
-    ) {
-      if (!origDeleteRequireCache.has(file)) {
-        deleteRequireCache[file] = deleteRequireCache[parent.id] || false
+process.on('message', (message: MessageForChild) => {
+  debug('message received', message)
+  switch (message.type) {
+    case 'clearRequireCache': {
+      for (const key in deleteRequireCache) {
+        if (deleteRequireCache[key]) delete require.cache[key]
       }
-      sendMessage({
-        file,
-        parent: parent.id,
-      })
-    } else {
-      debug('ignoring module: ', name)
+      return
     }
-    return _load_orig(name, parent, isMain)
+    case 'fileChange': {
+      invalidate(message.file)
+      return
+    }
+    case 'launch': {
+      const { options } = message
+      const origDeleteRequireCache = new Set(options.deleteRequireCache)
+      options.deleteRequireCache?.forEach((m) => (deleteRequireCache[m] = true))
+      const main = path.resolve(options.main)
+      // @ts-expect-error not typed
+      const _load_orig = Module._load
+      // @ts-expect-error not typed
+      Module._load = function (
+        name: string,
+        parent: { id: string },
+        isMain: boolean
+      ) {
+        // @ts-expect-error not typed
+        const file = Module._resolveFilename(name, parent)
+        registerModuleParent(file, parent.id)
+        if (
+          parent &&
+          (options.includeModules || file.indexOf('node_modules') < 0) &&
+          !natives[file] &&
+          file !== main
+        ) {
+          if (!origDeleteRequireCache.has(file)) {
+            deleteRequireCache[file] = deleteRequireCache[parent.id] || false
+          }
+          sendMessageToParent({
+            file,
+            parent: parent.id,
+          })
+        } else {
+          debug('ignoring module: ', name)
+        }
+        return _load_orig(name, parent, isMain)
+      }
+      require(main)
+    }
   }
-  require(main)
 })
-sendMessage({ status: 'ready' })
+sendMessageToParent({ status: 'ready' })
 
 process.on('uncaughtException', (err: any) => {
   log('uncaught exception in child process:', err)
-  sendMessage({ err: util.inspect(err) })
+  sendMessageToParent({ err: util.inspect(err) })
 })
 process.on('unhandledRejection', (err: any) => {
   log('unhandled rejection in child process:', err)
-  sendMessage({ err: util.inspect(err) })
+  sendMessageToParent({ err: util.inspect(err) })
 })
