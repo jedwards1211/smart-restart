@@ -21,7 +21,13 @@
     "live",
     "code",
     "reload",
-    "hot"
+    "hot",
+    "hot-reloading",
+    "hot-module-replacement",
+    "hmr",
+    "commonjs",
+    "file-watcher",
+    "file-watching"
   ],
   "bugs": {
     "url": "https://github.com/jedwards1211/smart-restart/issues"
