@@ -64,6 +64,7 @@ const invalidateSoon = debounce(() => {
         .join('')}`
     )
     for (const id of unloadIds) delete require.cache[id]
+    moduleGraph.delete(unloadIds)
     for (const callback of callbacks) callback()
     log(`hot reload complete`)
   }
