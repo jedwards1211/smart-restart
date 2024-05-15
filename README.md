@@ -1,5 +1,7 @@
 # smart-restart
 
+CommonJS module load hook that restarts or does Webpack-style hot module replacement when a file is changed
+
 [![CircleCI](https://circleci.com/gh/jedwards1211/smart-restart.svg?style=svg)](https://circleci.com/gh/jedwards1211/smart-restart)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
@@ -15,8 +17,13 @@ and your app process gets something else. It's even more of a pain to use with `
 process starts with a breakpoint as well, so you have to open `node-inspector` for it, resume it, _then_ open
 `node-inspector` for your actual app.
 
+On top of that, neither supports any hot module replacement, which is the only way to react to changes quickly in a
+large project.
+
 `smart-restart` combines both approaches: it uses `piping`'s require hook to only watch files that have been required,
 but it `spawns` your app instead of running a cluster, so that you can pass `--debug` or `--debug-brk` to your app.
+And it provides a basic version of Webpack's hot module replacement API for Node CommonJS, without using Webpack or
+doing any bundling.
 
 ## Usage
 
@@ -50,6 +57,24 @@ launch({
 ```
 
 You can `launch` as many other processes as you want in the same supervisor process.
+
+## Hot Module Replacement
+
+`smart-restart` supports the following subset of Webpack's hot module replacement API:
+
+```js
+if (module.hot) {
+  module.hot.accept('./myModule', () => {
+    const newVersion = require('./myModule')
+    // do something with newVersion
+  })
+}
+```
+
+Webpack's other overloads for `module.hot.accept` aren't supported.
+
+If not all ancestors of a changed module have `module.hot.accept` hooks, then `smart-restart` will
+relaunch the whole process.
 
 ## Exiting for good
 
