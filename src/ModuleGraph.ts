@@ -29,6 +29,15 @@ export default class ModuleGraph {
   }
 
   register(id: string, parentId: string) {
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new Error(`invalid id: ${id}`)
+    }
+    if (typeof parentId !== 'string' || !parentId.trim()) {
+      throw new Error(`invalid parentId: ${parentId}`)
+    }
+    if (parentId === id) {
+      throw new Error(`parentId === id`)
+    }
     const mod = this.getOrCreate(id)
     const parent = this.getOrCreate(parentId)
     mod.parents.add(parent)
@@ -75,7 +84,7 @@ export default class ModuleGraph {
 
     while (queue.length) {
       const mod = queue.pop()
-      if (!mod) continue
+      if (!mod || unloadIds.has(mod.id)) continue
       unloadIds.add(mod.id)
       if (!mod.parents.size) restart = true
       for (const parent of mod.parents) {
