@@ -35,13 +35,12 @@ export default class ModuleGraph {
     if (typeof parentId !== 'string' || !parentId.trim()) {
       throw new Error(`invalid parentId: ${parentId}`)
     }
-    if (parentId === id) {
-      throw new Error(`parentId === id`)
-    }
     const mod = this.getOrCreate(id)
-    const parent = this.getOrCreate(parentId)
-    mod.parents.add(parent)
-    parent.children.add(mod)
+    if (parentId !== id) {
+      const parent = this.getOrCreate(parentId)
+      mod.parents.add(parent)
+      parent.children.add(mod)
+    }
   }
 
   delete(ids: Iterable<string>) {
