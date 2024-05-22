@@ -56,27 +56,29 @@ process.on('message', (message: MessageForChild) => {
       // @ts-expect-error not typed
       Module._load = function (
         name: string,
-        parent: { id: string },
+        parent: { id: string } | undefined,
         isMain: boolean
       ) {
-        // @ts-expect-error not typed
-        const file = Module._resolveFilename(name, parent)
-        registerModuleParent(file, parent.id)
-        if (
-          parent &&
-          (options.includeModules || file.indexOf('node_modules') < 0) &&
-          !natives[file] &&
-          file !== main
-        ) {
-          if (!origDeleteRequireCache.has(file)) {
-            deleteRequireCache[file] = deleteRequireCache[parent.id] || false
+        if (parent && parent.id) {
+          // @ts-expect-error not typed
+          const file = Module._resolveFilename(name, parent)
+          registerModuleParent(file, parent.id)
+          if (
+            parent &&
+            (options.includeModules || file.indexOf('node_modules') < 0) &&
+            !natives[file] &&
+            file !== main
+          ) {
+            if (!origDeleteRequireCache.has(file)) {
+              deleteRequireCache[file] = deleteRequireCache[parent.id] || false
+            }
+            sendMessageToParent({
+              file,
+              parent: parent.id,
+            })
+          } else {
+            debug('ignoring module: ', name)
           }
-          sendMessageToParent({
-            file,
-            parent: parent.id,
-          })
-        } else {
-          debug('ignoring module: ', name)
         }
         return _load_orig(name, parent, isMain)
       }
