@@ -33,6 +33,10 @@ export function sendMessageToParent(message: MessageFromChild) {
   process.send?.(message)
 }
 
+process.on('disconnect', () => {
+  log('parent disconnected')
+  process.exit()
+})
 process.on('message', (message: MessageForChild) => {
   debug('message received', message)
   switch (message.type) {

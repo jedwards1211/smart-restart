@@ -42,25 +42,22 @@ export type MessageForChild =
 function launch(ops: LaunchOptions) {
   let lastErr = ''
   let child: ChildProcess | undefined
+  let restartTimeout: NodeJS.Timeout | undefined
   let watcher: FSWatcher
-  let childRunning = false
-  let killTimeout: NodeJS.Timeout | null = null
 
-  const options = Object.assign(
-    {
-      includeModules: false,
-      ignore: /(\/\.|~$)/,
-      restartOnError: true,
-      restartOnExit: true,
-      killSignal: 'SIGINT',
-      command: process.argv[0],
-      commandOptions: [],
-      spawnOptions: {},
-      deleteRequireCache: [],
-      args: [],
-    },
-    ops
-  )
+  const options = {
+    includeModules: false,
+    ignore: /(\/\.|~$)/,
+    restartOnError: true,
+    restartOnExit: true,
+    killSignal: 'SIGINT' as const,
+    command: process.argv[0],
+    commandOptions: [],
+    spawnOptions: {},
+    deleteRequireCache: [],
+    args: [],
+    ...ops,
+  }
   const { killSignal, onChildSpawned } = options
   if (!options.main) throw new Error('missing main')
   const initial = path.resolve(options.main)
@@ -71,45 +68,80 @@ function launch(ops: LaunchOptions) {
     [initial]: false,
   }
   options.deleteRequireCache.forEach((m) => (deleteRequireCache[m] = true))
-  process.on('exit', () => child && child.kill())
+
+  let userKilled = false
+
+  function signalHandler(signal: string) {
+    if (userKilled) {
+      log(`got second ${signal}, killing child process with SIGKILL`)
+      kill('SIGKILL')
+      process.exit()
+    } else {
+      log(`got ${signal}, killing child process with ${options.killSignal}`)
+      userKilled = true
+      kill()
+    }
+  }
+
+  process.on('SIGINT', signalHandler)
+  process.on('SIGTERM', signalHandler)
+  process.on('exit', () => kill('SIGKILL'))
 
   function done(codeOrError?: number | Error, signal?: string) {
+    if (restartTimeout) {
+      clearTimeout(restartTimeout)
+      restartTimeout = undefined
+    }
+    child?.removeAllListeners()
+    child = undefined
     if (codeOrError instanceof Error) {
       log('child process error:', codeOrError)
     } else if (typeof codeOrError === 'number') {
-      log('process exited with code', codeOrError)
+      log('child process exited with code', codeOrError)
     } else if (signal != null) {
-      log('process was killed with', signal)
+      log('child process was killed with', signal)
+    }
+    if (userKilled) {
+      process.exit()
+      return
     }
 
-    childRunning = false
     if (typeof codeOrError !== 'number' || options.restartOnExit) restart()
+  }
+
+  function kill(signal = killSignal) {
+    child?.kill(signal)
+    watcher
+      .close()
+      .catch((err) => log('error closing file watcher:', err.stack))
   }
 
   function sendToChild(message: MessageForChild) {
     child?.send(message, (err) => {
       if (err) {
-        log('failed to send message to child', err)
+        log('failed to send message to child process', err)
       }
     })
   }
 
   function restart() {
-    if (childRunning) {
-      if (killTimeout == null) {
-        log('killing process with', killSignal)
-        child?.kill(killSignal)
-        killTimeout = setTimeout(() => {
-          childRunning = false
-          restart()
-        }, ops.killTimeout || 10000)
-      }
+    if (child) {
+      if (restartTimeout) return
+      kill()
+      const currentChild = child
+      restartTimeout = setTimeout(() => {
+        if (child === currentChild) {
+          kill('SIGKILL')
+          start()
+        }
+      }, ops.killTimeout || 10000)
       return
     }
-
-    // clean up everything from previous launch
     kill('SIGKILL')
+    start()
+  }
 
+  function start() {
     watcher = chokidar.watch(initial, {
       ignored: options.ignore,
       ignoreInitial: false,
@@ -118,13 +150,13 @@ function launch(ops: LaunchOptions) {
       binaryInterval: options.binaryInterval || 300,
     })
     watcher.on('change', function (file) {
-      log('File', path.relative(process.cwd(), file), 'has changed')
+      log('file has changed:', path.relative(process.cwd(), file))
       if (deleteRequireCache[file]) clearRequireCacheSoon()
-      // else restartSoon()
       else {
         sendToChild({ type: 'fileChange', file })
       }
     })
+    watcher.on('error', (error) => log('error from file watcher:', error))
 
     const args = [
       options.command,
@@ -133,16 +165,13 @@ function launch(ops: LaunchOptions) {
         path.resolve(__dirname, `launcher${path.extname(__filename)}`),
         ...options.args,
       ],
-      Object.assign(options.spawnOptions, {
-        stdio: [0, 1, 2, 'ipc'],
-      }),
-    ] as const
+      { ...options.spawnOptions, stdio: [0, 1, 2, 'ipc'] },
+    ] satisfies Parameters<typeof spawn>
 
-    log('spawning process')
+    log('spawning child process')
     child = spawn(...args)
-    childRunning = true
 
-    child.on('exit', done)
+    child.on('close', done)
     child.on('error', done)
 
     debug('spawned child pid: ', child.pid)
@@ -180,31 +209,12 @@ function launch(ops: LaunchOptions) {
 
     if (onChildSpawned) onChildSpawned(child)
   }
-  restart()
+  start()
 
   const clearRequireCacheSoon = debounce(() => {
     sendToChild({ type: 'clearRequireCache' })
     log('cleared require cache')
   }, 500)
-
-  function kill(signal = killSignal) {
-    childRunning = false
-    if (killTimeout != null) {
-      clearTimeout(killTimeout)
-      killTimeout = null
-    }
-    if (child) {
-      child.removeAllListeners()
-      child.kill(signal)
-      child = undefined
-    }
-    if (watcher) {
-      watcher.removeAllListeners()
-      watcher
-        .close()
-        .catch((err) => console.error('Error closing file watcher:', err.stack))
-    }
-  }
 
   return {
     restart,
